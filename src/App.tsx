@@ -31,6 +31,12 @@ export default function App() {
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
   const CAM_URL = "https://webcams.meteonews.net/webcams/standard/640x480/613.jpg";
 
+  const [refreshKey, setRefreshKey] = useState(Date.now());
+
+  const refreshImage = () => {
+    setRefreshKey(Date.now());
+  };
+
   useEffect(() => {
     // Check if firebase is configured
     try {
@@ -62,6 +68,7 @@ export default function App() {
         })) as Capture[];
         setCaptures(docs);
         setLoading(false);
+        setRefreshKey(Date.now()); // Update key when new data arrives
       },
       (err) => {
         console.error("Error fetching captures:", err);
@@ -116,24 +123,36 @@ export default function App() {
           )}
         </div>
 
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-4 rounded-2xl flex items-center gap-4"
-        >
-          <div className="bg-blue-500/10 p-3 rounded-full text-blue-400">
-            <Clock className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-slate-500 uppercase font-bold tracking-tighter">
-              {latestCapture ? "Letzte Aufnahme" : "Live-Bild"}
+        <div className="flex flex-wrap items-center gap-4">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={refreshImage}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm font-medium hover:bg-slate-800 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${!latestCapture && "animate-spin"}`} />
+            Aktualisieren
+          </motion.button>
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-4 rounded-2xl flex items-center gap-4"
+          >
+            <div className="bg-blue-500/10 p-3 rounded-full text-blue-400">
+              <Clock className="w-5 h-5" />
             </div>
-            <div className="text-sm font-medium">
-              {latestCapture ? latestCapture.timestamp?.toDate().toLocaleTimeString('de-CH') : "Wird gerade gestreamt"}
+            <div>
+              <div className="text-xs text-slate-500 uppercase font-bold tracking-tighter">
+                {latestCapture ? "Letzte Aufnahme" : "Live-Bild"}
+              </div>
+              <div className="text-sm font-medium">
+                {latestCapture ? latestCapture.timestamp?.toDate().toLocaleTimeString('de-CH') : "Wird gerade gestreamt"}
+              </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto space-y-12">
@@ -145,7 +164,7 @@ export default function App() {
           >
             {latestCapture || !loading ? (
               <img 
-                src={latestCapture?.imageUrl || `${CAM_URL}?t=${Date.now()}`} 
+                src={latestCapture?.imageUrl || `${CAM_URL}?t=${refreshKey}`} 
                 alt="Latest Klausenpass Webcam"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 referrerPolicy="no-referrer"
