@@ -29,15 +29,19 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+  const CAM_URL = "https://webcams.meteonews.net/webcams/standard/640x480/613.jpg";
 
   useEffect(() => {
     // Check if firebase is configured
     try {
       if (db) {
         setIsFirebaseReady(true);
+      } else {
+        setLoading(false);
       }
     } catch (e) {
       console.log("Firebase not ready yet");
+      setLoading(false);
     }
   }, []);
 
@@ -100,6 +104,16 @@ export default function App() {
             Minütliches Archiv des Klausenpasses (1,948 m ü. M.). 
             Verfolge die Wetterveränderungen in Echtzeit.
           </motion.p>
+          {!isFirebaseReady && !loading && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-4 flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 text-xs"
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>Die Archivierung ist deaktiviert. Bitte schließe die Firebase-Konfiguration ab, um Bilder zu speichern.</span>
+            </motion.div>
+          )}
         </div>
 
         <motion.div 
@@ -112,9 +126,11 @@ export default function App() {
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Aktuelles Bild</div>
+            <div className="text-xs text-slate-500 uppercase font-bold tracking-tighter">
+              {latestCapture ? "Letzte Aufnahme" : "Live-Bild"}
+            </div>
             <div className="text-sm font-medium">
-              {latestCapture ? latestCapture.timestamp?.toDate().toLocaleTimeString('de-CH') : "Warten..."}
+              {latestCapture ? latestCapture.timestamp?.toDate().toLocaleTimeString('de-CH') : "Wird gerade gestreamt"}
             </div>
           </div>
         </motion.div>
@@ -127,9 +143,9 @@ export default function App() {
             layoutId="latest-hero"
             className="relative aspect-video w-full overflow-hidden rounded-3xl border border-slate-800 bg-slate-900"
           >
-            {latestCapture ? (
+            {latestCapture || !loading ? (
               <img 
-                src={latestCapture.imageUrl} 
+                src={latestCapture?.imageUrl || `${CAM_URL}?t=${Date.now()}`} 
                 alt="Latest Klausenpass Webcam"
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 referrerPolicy="no-referrer"

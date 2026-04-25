@@ -19,9 +19,13 @@ async function startServer() {
   const configPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(configPath)) {
     const firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    const firebaseApp = initializeApp(firebaseConfig);
-    db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
-    console.log("Firebase initialized");
+    if (firebaseConfig.apiKey) {
+      const firebaseApp = initializeApp(firebaseConfig);
+      db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+      console.log("Firebase initialized");
+    } else {
+      console.log("Firebase config found but empty. Capturing will not start.");
+    }
   } else {
     console.log("Firebase config not found. Capturing will not start.");
   }
