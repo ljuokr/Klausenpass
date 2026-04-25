@@ -1,0 +1,6 @@
+{
+  "name": "Klausenpass Webcam Tracker",
+  "description": "Archiviert minütlich das Webcam-Bild vom Klausenpass.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "Capture": {
+      "title": "Webcam Capture",
+      "description": "Record of a webcam image capture at a specific time.",
+      "type": "object",
+      "properties": {
+        "imageUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "The URL of the captured image."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The time the image was captured."
+        }
+      },
+      "required": ["imageUrl", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/captures/{captureId}": {
+      "schema": "Capture",
+      "description": "Collection of minutely webcam image captures."
+    }
+  }
+}
