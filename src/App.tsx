@@ -36,64 +36,175 @@ interface Capture {
   passId: string;
 }
 
+type RoadStatus =
+  | { state: "closed"; opening?: string }
+  | { state: "partial"; until: string }
+  | { state: "open" };
+
 interface Pass {
   id: string;
   name: string;
   altitude: string;
+  liveUrl: string;
+  source: { label: string; href: string };
+  status: RoadStatus;
+  note?: string;
+  archiveId?: string;
 }
 
-// Webcam IDs are meteonews.net cam IDs, verified live April 2026.
-// Most legacy IDs (838, 614, 619, 1058–1064, etc.) now return 404 from
-// meteonews — kept the working ones (613, 813) to preserve existing
-// Firestore archives, replaced the rest with the canonical cam currently
-// listed on meteonews.ch for each pass.
+// Curated list of winter-closed passes — focused on cycling: cams that
+// show the actual road, not just panoramic mountain views.
+// Year-round-open passes (Brünig, Forclaz, Jaun, Mosses, Saanenmöser,
+// Simplon, Julier, Maloja, Ofen, Bernina, Lukmanier) intentionally
+// excluded.
+// archiveId matches the meteonews cam IDs the Firestore scraper has
+// historically used (613, 813); other passes have no archive yet.
 const REGIONS: { name: string; passes: Pass[] }[] = [
   {
     name: "Zentralschweiz",
     passes: [
-      { id: "613", name: "Klausenpass", altitude: "1'948 m" },
-      { id: "89", name: "Sustenpass", altitude: "2'224 m" },
-      { id: "12577", name: "Furkapass", altitude: "2'429 m" },
-      { id: "9568", name: "Gotthardpass", altitude: "2'106 m" },
-      { id: "11258", name: "Oberalppass", altitude: "2'044 m" },
-      { id: "236", name: "Brünigpass", altitude: "1'008 m" },
+      {
+        id: "klausenpass",
+        name: "Klausenpass",
+        altitude: "1'948 m",
+        liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/613.jpg",
+        source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W613/Klausenpass" },
+        status: { state: "closed", opening: "Mai" },
+        note: "Baustelle Urnerboden bis 12. Juni",
+        archiveId: "613",
+      },
+      {
+        id: "sustenpass",
+        name: "Sustenpass",
+        altitude: "2'224 m",
+        liveUrl: "https://livecam.sustenpass.ch/Sustenpass000M.jpg",
+        source: { label: "sustenpass.ch", href: "https://sustenpass.ch/de/Info/Livecam" },
+        status: { state: "partial", until: "Steingletscher" },
+      },
+      {
+        id: "furkapass",
+        name: "Furkapass",
+        altitude: "2'429 m",
+        liveUrl: "https://webcam.dieselcrew.ch/tiefenbach.jpg",
+        source: { label: "Hotel Tiefenbach", href: "https://www.hotel-tiefenbach.ch/" },
+        status: { state: "closed", opening: "Juni" },
+      },
+      {
+        id: "grimselpass",
+        name: "Grimselpass",
+        altitude: "2'164 m",
+        liveUrl: "https://images.bergfex.at/webcams/?id=22208",
+        source: { label: "bergfex.ch", href: "https://www.bergfex.ch/obergoms/webcams/c22208/" },
+        status: { state: "partial", until: "Räterichsboden" },
+      },
+      {
+        id: "gotthardpass",
+        name: "Gotthardpass (Tremola)",
+        altitude: "2'106 m",
+        liveUrl: "https://webcam.afbn.ch/H_OSG_018,070_N_KAM_001_Sued.jpg",
+        source: { label: "afbn.ch · Galleria dei Banchi", href: "https://www.afbn.ch/verkehr-und-baustellen/webcams" },
+        status: { state: "closed", opening: "Mitte Mai" },
+      },
+      {
+        id: "oberalppass",
+        name: "Oberalppass",
+        altitude: "2'044 m",
+        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1697114855/original.jpg",
+        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/oberalppass_schweiz" },
+        status: { state: "closed", opening: "13. Mai 2026" },
+      },
     ],
   },
   {
-    name: "Wallis",
+    name: "Wallis & Tessin",
     passes: [
-      { id: "11013", name: "Grimselpass", altitude: "2'164 m" },
-      { id: "12270", name: "Nufenenpass", altitude: "2'478 m" },
-      { id: "9585", name: "Simplonpass", altitude: "2'008 m" },
-      { id: "11995", name: "Gr. St. Bernhard", altitude: "2'469 m" },
-      { id: "9525", name: "Col de la Forclaz", altitude: "1'527 m" },
-    ],
-  },
-  {
-    name: "Berner Oberland & Waadt",
-    passes: [
-      { id: "733", name: "Jaunpass", altitude: "1'509 m" },
-      { id: "11502", name: "Col des Mosses", altitude: "1'445 m" },
-      { id: "571", name: "Saanenmöser", altitude: "1'279 m" },
+      {
+        id: "nufenenpass",
+        name: "Nufenenpass",
+        altitude: "2'478 m",
+        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1697040056/original.jpg",
+        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/nufenenpass_schweiz_2658070" },
+        status: { state: "partial", until: "All'Acqua" },
+      },
+      {
+        id: "gr-st-bernhard",
+        name: "Gr. St. Bernhard",
+        altitude: "2'472 m",
+        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1220308451/original.jpg",
+        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/grosser-st-bernhard_schweiz_2660518" },
+        status: { state: "closed" },
+      },
     ],
   },
   {
     name: "Graubünden",
     passes: [
-      { id: "12200", name: "Lukmanierpass", altitude: "1'915 m" },
-      { id: "813", name: "San Bernardino", altitude: "2'066 m" },
-      { id: "14003", name: "Splügenpass", altitude: "2'115 m" },
-      { id: "13501", name: "Flüelapass", altitude: "2'383 m" },
-      { id: "178", name: "Albulapass", altitude: "2'312 m" },
-      { id: "13196", name: "Julierpass", altitude: "2'284 m" },
-      { id: "9892", name: "Ofenpass", altitude: "2'149 m" },
-      { id: "456", name: "Berninapass", altitude: "2'328 m" },
-      { id: "13158", name: "Malojapass", altitude: "1'815 m" },
+      {
+        id: "san-bernardino",
+        name: "San Bernardino",
+        altitude: "2'066 m",
+        liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/813.jpg",
+        source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W813/San-Bernardino-Pass" },
+        status: { state: "closed" },
+        archiveId: "813",
+      },
+      {
+        id: "spluegenpass",
+        name: "Splügenpass",
+        altitude: "2'113 m",
+        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1292865761/original.jpg",
+        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/spluegenpass_schweiz_2658527" },
+        status: { state: "closed" },
+      },
+      {
+        id: "albulapass",
+        name: "Albulapass",
+        altitude: "2'312 m",
+        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1017402670/original.jpg",
+        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/albulapass_schweiz_2661821" },
+        status: { state: "closed" },
+      },
+      {
+        id: "fluelapass",
+        name: "Flüelapass",
+        altitude: "2'383 m",
+        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1232545098/original.jpg",
+        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/fluelapass_schweiz_2660753" },
+        status: { state: "closed" },
+      },
+      {
+        id: "umbrailpass",
+        name: "Umbrailpass",
+        altitude: "2'501 m",
+        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1203067577/original.jpg",
+        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/umbrailpass_schweiz_3167576" },
+        status: { state: "closed" },
+      },
     ],
   },
 ];
 
 const ALL_PASSES: Pass[] = REGIONS.flatMap((r) => r.passes);
+
+function statusLabel(s: RoadStatus): string {
+  if (s.state === "open") return "Offen";
+  if (s.state === "partial") return `Offen bis ${s.until}`;
+  return s.opening ? `Wintersperre · öffnet ${s.opening}` : "Wintersperre";
+}
+
+function statusColors(s: RoadStatus): { dot: string; pill: string } {
+  if (s.state === "open") {
+    return { dot: "bg-emerald-500", pill: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" };
+  }
+  if (s.state === "partial") {
+    return { dot: "bg-amber-400", pill: "bg-amber-400/10 border-amber-400/30 text-amber-300" };
+  }
+  return { dot: "bg-rose-500", pill: "bg-rose-500/10 border-rose-500/30 text-rose-400" };
+}
+
+function cacheBust(url: string, t: number): string {
+  return url + (url.includes("?") ? "&" : "?") + "_t=" + t;
+}
 
 const TL_SPEEDS = [0.5, 1, 2, 4] as const;
 type TlSpeed = (typeof TL_SPEEDS)[number];
@@ -224,6 +335,12 @@ export default function App() {
 
   useEffect(() => {
     if (!isFirebaseReady) return;
+    const archiveId = selectedPass.archiveId;
+    if (!archiveId) {
+      setCaptures([]);
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     const q = query(
@@ -240,7 +357,7 @@ export default function App() {
           ...doc.data(),
         })) as Capture[];
 
-        const filteredDocs = allDocs.filter((cap) => cap.passId === selectedPassId);
+        const filteredDocs = allDocs.filter((cap) => cap.passId === archiveId);
         setCaptures(filteredDocs.slice(0, 24));
         setLoading(false);
       },
@@ -252,7 +369,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, [isFirebaseReady, selectedPassId]);
+  }, [isFirebaseReady, selectedPass.archiveId]);
 
   const latestCapture = captures[0];
   const selectedCapture =
@@ -306,9 +423,11 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedCaptureIndex, isTimeLapseActive, captures.length, closeLightbox, stepLightbox]);
 
-  const heroSrc = latestCapture?.imageUrl
-    ?? `https://webcams.meteonews.net/webcams/standard/640x480/${selectedPass.id}.jpg?t=${refreshKey}`;
+  const heroSrc = latestCapture?.imageUrl ?? cacheBust(selectedPass.liveUrl, refreshKey);
   const showHeroOffline = heroErrored;
+  const status = selectedPass.status;
+  const statusText = statusLabel(status);
+  const statusColor = statusColors(status);
 
   const tlFrame = isTimeLapseActive && captures.length > 0
     ? captures[captures.length - 1 - timeLapseIndex]
@@ -329,13 +448,14 @@ export default function App() {
             </motion.div>
 
             <motion.div
+              key={selectedPassId + statusText}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-500 uppercase tracking-tighter"
+              className={`flex items-center gap-2 px-2 py-1 rounded-full border text-[10px] font-bold uppercase tracking-tighter ${statusColor.pill}`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              {ALL_PASSES.length} Cloud Scrapers Active
+              <span className={`w-1.5 h-1.5 rounded-full ${statusColor.dot} ${status.state === "closed" ? "" : "animate-pulse"}`}></span>
+              {statusText}
             </motion.div>
           </div>
           <motion.h1
@@ -353,8 +473,10 @@ export default function App() {
             transition={{ delay: 0.2 }}
             className="max-w-md text-slate-400"
           >
-            Minütliches Archiv des Passes ({selectedPass.altitude} ü. M.).
-            Verfolge die Wetterveränderungen in Echtzeit.
+            {selectedPass.altitude} ü. M. · Strassenzustand und Velo-Frequenz beobachten.
+            {selectedPass.note && (
+              <span className="block mt-1 text-amber-400/80 text-sm">⚠ {selectedPass.note}</span>
+            )}
           </motion.p>
           {!isFirebaseReady && !loading && (
             <motion.div
@@ -559,12 +681,13 @@ export default function App() {
           </motion.div>
         </section>
 
-        {/* History Grid */}
+        {/* History Grid — only for passes with a Firestore archive. */}
+        {selectedPass.archiveId && (
         <section>
           <div className="flex items-center gap-3 mb-8">
             <History className="w-5 h-5 text-slate-500" />
             <h2 className="text-xl font-semibold">
-              Letzte {Math.max(0, captures.length - 1) || 24} Aufnahmen
+              Letzte {Math.max(0, captures.length - 1)} Aufnahmen
             </h2>
           </div>
 
@@ -625,6 +748,7 @@ export default function App() {
             </div>
           )}
         </section>
+        )}
       </main>
 
       {/* Lightbox */}
@@ -790,18 +914,28 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <footer className="max-w-6xl mx-auto mt-24 py-12 border-t border-slate-800 text-center">
-        <p className="text-slate-600 text-sm italic">
-          Datenquelle:{" "}
+      <footer className="max-w-6xl mx-auto mt-24 py-12 border-t border-slate-800 text-center space-y-2">
+        <p className="text-slate-500 text-sm">
+          Webcam {selectedPass.name} · Datenquelle:{" "}
           <a
-            href="https://meteonews.net"
+            href={selectedPass.source.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-slate-400 transition-colors not-italic"
+            className="hover:text-slate-300 underline-offset-4 hover:underline transition-colors"
           >
-            meteonews.net
-          </a>{" "}
-          &bull; Webcam {selectedPass.name}
+            {selectedPass.source.label}
+          </a>
+        </p>
+        <p className="text-slate-700 text-xs">
+          Status- und Öffnungsdaten:{" "}
+          <a
+            href="https://alpen-paesse.ch/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-slate-500 underline-offset-4 hover:underline transition-colors"
+          >
+            alpen-paesse.ch
+          </a>
         </p>
       </footer>
     </div>
