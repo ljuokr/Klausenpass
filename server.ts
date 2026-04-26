@@ -33,18 +33,32 @@ async function startServer() {
   // Camera URLs for different passes
   const PASSES = [
     { id: "613", name: "Klausenpass" },
-    { id: "612", name: "Gotthardpass" },
+    { id: "838", name: "Gotthardpass" },
     { id: "614", name: "Grimselpass" },
     { id: "615", name: "Sustenpass" },
     { id: "616", name: "Furkapass" },
     { id: "618", name: "Oberalppass" },
+    { id: "619", name: "Nufenenpass" },
+    { id: "813", name: "San Bernardino" },
+    { id: "621", name: "Simplonpass" },
+    { id: "610", name: "Brünigpass" },
+    { id: "611", name: "Jaunpass" },
+    { id: "608", name: "Col des Mosses" },
+    { id: "609", name: "Saanenmöser" },
+    { id: "607", name: "Col de la Forclaz" },
+    { id: "625", name: "Gr. St. Bernhard" },
     { id: "1063", name: "Flüelapass" },
     { id: "1062", name: "Albulapass" },
     { id: "1061", name: "Julierpass" },
+    { id: "1060", name: "Ofenpass" },
+    { id: "1059", name: "Berninapass" },
+    { id: "1058", name: "Malojapass" },
+    { id: "1064", name: "Lukmanierpass" },
+    { id: "1069", name: "Splügenpass" },
   ];
 
-  // Capture loop
-  setInterval(async () => {
+  // Function to run capture cycle
+  const runCaptureCycle = async () => {
     if (!db) return;
     try {
       const now = new Date().toISOString();
@@ -52,23 +66,66 @@ async function startServer() {
       const nowMs = Date.now();
       
       const capturePromises = PASSES.map(async (pass) => {
-        const camUrl = `https://webcams.meteonews.net/webcams/standard/640x480/${pass.id}.jpg`;
-        const imageUrl = `${camUrl}?t=${nowMs}`;
-        console.log(`- Queuing capture for ${pass.name} (${pass.id})`);
-        return addDoc(collection(db, "captures"), {
-          passId: pass.id,
-          passName: pass.name,
-          imageUrl: imageUrl,
-          timestamp: serverTimestamp(),
-        });
+        // Try multiple URL variants
+        const urls = [
+          `https://webcam.meteonews.ch/standard/640x480/${pass.id}.jpg`,
+          `https://webcams.meteonews.net/webcams/standard/640x480/${pass.id}.jpg`
+        ];
+        
+        for (const camUrl of urls) {
+          const imageUrl = `${camUrl}?t=${nowMs}`;
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+            const response = await fetch(imageUrl, { 
+              method: 'GET',
+              signal: controller.signal,
+              headers: { 'Range': 'bytes=0-1023' } // Only first 1KB
+            });
+            
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const contentType = response.headers.get('content-type');
+              const contentLength = response.headers.get('content-length');
+              
+              // If size is very small (e.g. < 15KB), it might be a placeholder
+              const size = contentLength ? parseInt(contentLength) : 0;
+              if (size > 0 && size < 12000) {
+                console.warn(`- Placeholder detected for ${pass.name} (${pass.id}) on ${camUrl} (size: ${size})`);
+                continue; // Try next URL
+              }
+
+              if (contentType && contentType.startsWith('image/')) {
+                console.log(`- Storing capture for ${pass.name} (${pass.id}) from ${camUrl}`);
+                return addDoc(collection(db, "captures"), {
+                  passId: pass.id,
+                  passName: pass.name,
+                  imageUrl: imageUrl, // Store full URL with timestamp
+                  timestamp: serverTimestamp(),
+                });
+              }
+            }
+          } catch (fetchErr: any) {
+            // ignore and try next
+          }
+        }
+        console.warn(`- No valid source found for ${pass.name} (${pass.id})`);
+        return null;
       });
 
-      await Promise.all(capturePromises);
-      console.log(`[${now}] Successfully stored ${PASSES.length} captures`);
+      const results = await Promise.all(capturePromises);
+      const storedCount = results.filter(r => r !== null).length;
+      console.log(`[${now}] Successfully stored ${storedCount} of ${PASSES.length} captures`);
     } catch (err) {
       console.error("Capture cycle failed:", err);
     }
-  }, 60000); // 1 minute
+  };
+
+  // Capture loop
+  runCaptureCycle(); // Start immediately
+  setInterval(runCaptureCycle, 60000); // And every minute
 
   // API Routes
   app.get("/api/health", (req, res) => {

@@ -27,14 +27,28 @@ interface Capture {
 
 const PASSES = [
   { id: "613", name: "Klausenpass", altitude: "1,948 m" },
-  { id: "612", name: "Gotthardpass", altitude: "2,106 m" },
+  { id: "838", name: "Gotthardpass", altitude: "2,106 m" },
   { id: "614", name: "Grimselpass", altitude: "2,164 m" },
   { id: "615", name: "Sustenpass", altitude: "2,224 m" },
   { id: "616", name: "Furkapass", altitude: "2,429 m" },
   { id: "618", name: "Oberalppass", altitude: "2,044 m" },
+  { id: "619", name: "Nufenenpass", altitude: "2,478 m" },
+  { id: "813", name: "San Bernardino", altitude: "2,066 m" },
+  { id: "621", name: "Simplonpass", altitude: "2,008 m" },
+  { id: "610", name: "Brünigpass", altitude: "1,008 m" },
+  { id: "611", name: "Jaunpass", altitude: "1,509 m" },
+  { id: "608", name: "Col des Mosses", altitude: "1,445 m" },
+  { id: "609", name: "Saanenmöser", altitude: "1,279 m" },
+  { id: "607", name: "Col de la Forclaz", altitude: "1,527 m" },
+  { id: "625", name: "Gr. St. Bernhard", altitude: "2,469 m" },
   { id: "1063", name: "Flüelapass", altitude: "2,383 m" },
   { id: "1062", name: "Albulapass", altitude: "2,312 m" },
   { id: "1061", name: "Julierpass", altitude: "2,284 m" },
+  { id: "1060", name: "Ofenpass", altitude: "2,149 m" },
+  { id: "1059", name: "Berninapass", altitude: "2,328 m" },
+  { id: "1058", name: "Malojapass", altitude: "1,815 m" },
+  { id: "1064", name: "Lukmanierpass", altitude: "1,915 m" },
+  { id: "1069", name: "Splügenpass", altitude: "2,115 m" },
 ];
 
 export default function App() {
@@ -83,14 +97,22 @@ export default function App() {
     const loadPromises = imagesToLoad.map((cap) => {
       return new Promise((resolve) => {
         const img = new Image();
+        const timeout = setTimeout(() => {
+          loadedCount++;
+          setPreloadProgress(Math.round((loadedCount / totalCount) * 100));
+          resolve(false);
+        }, 5000); // 5s timeout per image
+
         img.src = cap.imageUrl;
         img.referrerPolicy = "no-referrer";
         img.onload = () => {
+          clearTimeout(timeout);
           loadedCount++;
           setPreloadProgress(Math.round((loadedCount / totalCount) * 100));
           resolve(true);
         };
         img.onerror = () => {
+          clearTimeout(timeout);
           loadedCount++;
           setPreloadProgress(Math.round((loadedCount / totalCount) * 100));
           resolve(false);
@@ -159,14 +181,26 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 md:p-8 selection:bg-blue-500/30">
       <header className="max-w-6xl mx-auto mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 text-blue-400 mb-2 font-mono text-sm tracking-widest uppercase"
-          >
-            <Camera className="w-4 h-4" />
-            <span>Live Archive</span>
-          </motion.div>
+          <div className="flex items-center gap-4 mb-4">
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 text-blue-400 font-mono text-sm tracking-widest uppercase"
+            >
+              <Camera className="w-4 h-4" />
+              <span>Live Archive</span>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="flex items-center gap-2 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-500 uppercase tracking-tighter"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              {PASSES.length} Cloud Scrapers Active
+            </motion.div>
+          </div>
           <motion.h1 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -282,12 +316,45 @@ export default function App() {
             className="relative aspect-video w-full overflow-hidden rounded-3xl border border-slate-800 bg-slate-900"
           >
             {latestCapture || !loading ? (
-              <img 
-                src={latestCapture?.imageUrl || `${CAM_URL}?t=${refreshKey}`} 
-                alt={`Latest ${selectedPass.name} Webcam`}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
+              <>
+                <img 
+                  src={latestCapture?.imageUrl || `https://webcams.meteonews.net/webcams/standard/640x480/${selectedPass.id}.jpg?t=${refreshKey}`} 
+                  alt={`Latest ${selectedPass.name} Webcam`}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.visibility = 'hidden';
+                  }}
+                />
+                
+                {/* Timestamp Overlay */}
+                <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+                  <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs font-mono text-white/90">
+                      {latestCapture?.timestamp 
+                        ? (latestCapture.timestamp as any).toDate().toLocaleString('de-CH', { 
+                            day: '2-digit', month: '2-digit', year: 'numeric', 
+                            hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                          })
+                        : 'LIVE FEED'}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => setRefreshKey(prev => prev + 1)}
+                    className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white hover:bg-white/20 transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none -z-10">
+                  <div className="text-slate-800 flex flex-col items-center gap-4">
+                    <Camera className="w-16 h-16 opacity-10" />
+                    <span className="text-sm uppercase tracking-[0.3em] font-bold opacity-30">Camera Temporarily Offline</span>
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
                 {loading ? (
@@ -347,9 +414,19 @@ export default function App() {
                     alt={`Archive ${capture.timestamp?.toDate().toLocaleTimeString()}`}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).parentElement?.classList.add('bg-slate-900');
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
-                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Maximize2 className="w-6 h-6" />
+                  </div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div className="text-slate-700 flex flex-col items-center gap-2 hidden" id={`error-${capture.id}`}>
+                      <Camera className="w-8 h-8 opacity-20" />
+                      <span className="text-[10px] uppercase tracking-widest font-bold">Offline</span>
+                    </div>
                   </div>
                   <div className="absolute bottom-2 left-2 right-2 bg-slate-950/80 backdrop-blur-sm px-2 py-1 rounded-lg text-[10px] font-mono text-center">
                     {capture.timestamp?.toDate().toLocaleTimeString('de-CH')}
