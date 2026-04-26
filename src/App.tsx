@@ -8,33 +8,101 @@ import { useState, useEffect } from "react";
 import { 
   collection, 
   query, 
+  where,
   orderBy, 
   limit, 
   onSnapshot,
   Timestamp 
 } from "firebase/firestore";
 import { motion, AnimatePresence } from "motion/react";
-import { Camera, Clock, History, Maximize2, RefreshCw, AlertCircle } from "lucide-react";
+import { Camera, Clock, History, Maximize2, RefreshCw, AlertCircle, Play, X } from "lucide-react";
 import { db } from "./firebase";
 
 interface Capture {
   id: string;
   imageUrl: string;
   timestamp: Timestamp;
+  passId: string;
 }
 
+const PASSES = [
+  { id: "613", name: "Klausenpass", altitude: "1,948 m" },
+  { id: "612", name: "Gotthardpass", altitude: "2,106 m" },
+  { id: "614", name: "Grimselpass", altitude: "2,164 m" },
+  { id: "615", name: "Sustenpass", altitude: "2,224 m" },
+  { id: "616", name: "Furkapass", altitude: "2,429 m" },
+  { id: "618", name: "Oberalppass", altitude: "2,044 m" },
+  { id: "1063", name: "Flüelapass", altitude: "2,383 m" },
+  { id: "1062", name: "Albulapass", altitude: "2,312 m" },
+  { id: "1061", name: "Julierpass", altitude: "2,284 m" },
+];
+
 export default function App() {
+  const [selectedPassId, setSelectedPassId] = useState(PASSES[0].id);
   const [captures, setCaptures] = useState<Capture[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isFirebaseReady, setIsFirebaseReady] = useState(false);
-  const CAM_URL = "https://webcams.meteonews.net/webcams/standard/640x480/613.jpg";
+  const [isTimeLapseActive, setIsTimeLapseActive] = useState(false);
+  const [isPreloading, setIsPreloading] = useState(false);
+  const [preloadProgress, setPreloadProgress] = useState(0);
+  const [timeLapseIndex, setTimeLapseIndex] = useState(0);
+
+  const selectedPass = PASSES.find(p => p.id === selectedPassId) || PASSES[0];
+  const CAM_URL = `https://webcams.meteonews.net/webcams/standard/640x480/${selectedPassId}.jpg`;
 
   const [refreshKey, setRefreshKey] = useState(Date.now());
 
   const refreshImage = () => {
     setRefreshKey(Date.now());
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isTimeLapseActive && captures.length > 0) {
+      interval = setInterval(() => {
+        setTimeLapseIndex((prev) => (prev + 1) % captures.length);
+      }, 300); // 300ms per frame
+    }
+    return () => clearInterval(interval);
+  }, [isTimeLapseActive, captures.length]);
+
+  const startTimeLapse = async () => {
+    if (captures.length < 2) return;
+    
+    setIsPreloading(true);
+    setPreloadProgress(0);
+    
+    let loadedCount = 0;
+    const totalCount = captures.length;
+    
+    // Reverse array to pre-load from oldest to newest (how we play it)
+    const imagesToLoad = [...captures].reverse();
+    
+    const loadPromises = imagesToLoad.map((cap) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.src = cap.imageUrl;
+        img.referrerPolicy = "no-referrer";
+        img.onload = () => {
+          loadedCount++;
+          setPreloadProgress(Math.round((loadedCount / totalCount) * 100));
+          resolve(true);
+        };
+        img.onerror = () => {
+          loadedCount++;
+          setPreloadProgress(Math.round((loadedCount / totalCount) * 100));
+          resolve(false);
+        };
+      });
+    });
+
+    await Promise.all(loadPromises);
+    
+    setIsPreloading(false);
+    setTimeLapseIndex(0);
+    setIsTimeLapseActive(true);
   };
 
   useEffect(() => {
@@ -54,19 +122,24 @@ export default function App() {
   useEffect(() => {
     if (!isFirebaseReady) return;
 
+    setLoading(true);
     const q = query(
       collection(db, "captures"), 
       orderBy("timestamp", "desc"), 
-      limit(24)
+      limit(200) // Fetch more to filter in memory
     );
 
     const unsubscribe = onSnapshot(q, 
       (snapshot) => {
-        const docs = snapshot.docs.map(doc => ({
+        const allDocs = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Capture[];
-        setCaptures(docs);
+        
+        // Filter in memory to avoid needing a composite index
+        const filteredDocs = allDocs.filter(cap => cap.passId === selectedPassId);
+        
+        setCaptures(filteredDocs.slice(0, 24));
         setLoading(false);
         setRefreshKey(Date.now()); // Update key when new data arrives
       },
@@ -78,7 +151,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, [isFirebaseReady]);
+  }, [isFirebaseReady, selectedPassId]);
 
   const latestCapture = captures[0];
 
@@ -98,9 +171,10 @@ export default function App() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
+            key={selectedPass.name}
             className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-2"
           >
-            Klausenpass <span className="text-slate-500 font-light">Webcam</span>
+            {selectedPass.name} <span className="text-slate-500 font-light">Webcam</span>
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0 }}
@@ -108,7 +182,7 @@ export default function App() {
             transition={{ delay: 0.2 }}
             className="max-w-md text-slate-400"
           >
-            Minütliches Archiv des Klausenpasses (1,948 m ü. M.). 
+            Minütliches Archiv des Passes ({selectedPass.altitude} ü. M.). 
             Verfolge die Wetterveränderungen in Echtzeit.
           </motion.p>
           {!isFirebaseReady && !loading && (
@@ -124,6 +198,31 @@ export default function App() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
+          <motion.button
+            whileHover={!isPreloading ? { scale: 1.05 } : {}}
+            whileTap={!isPreloading ? { scale: 0.95 } : {}}
+            onClick={startTimeLapse}
+            disabled={captures.length < 2 || isPreloading}
+            className="relative flex items-center gap-2 px-4 py-2 bg-blue-600 border border-blue-500 rounded-xl text-sm font-medium hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20 overflow-hidden"
+          >
+            {isPreloading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Preloading {preloadProgress}%</span>
+                <motion.div 
+                  className="absolute bottom-0 left-0 h-1 bg-white/30"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${preloadProgress}%` }}
+                />
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Time-Lapse abspielen
+              </>
+            )}
+          </motion.button>
+
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -155,6 +254,26 @@ export default function App() {
         </div>
       </header>
 
+      <section className="max-w-6xl mx-auto mb-8">
+        <div className="flex flex-wrap items-center gap-3 pb-4">
+          {PASSES.map((pass) => (
+            <motion.button
+              key={pass.id}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSelectedPassId(pass.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all border ${
+                selectedPassId === pass.id 
+                  ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20" 
+                  : "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800"
+              }`}
+            >
+              {pass.name}
+            </motion.button>
+          ))}
+        </div>
+      </section>
+
       <main className="max-w-6xl mx-auto space-y-12">
         {/* Latest Hero */}
         <section className="relative group">
@@ -165,7 +284,7 @@ export default function App() {
             {latestCapture || !loading ? (
               <img 
                 src={latestCapture?.imageUrl || `${CAM_URL}?t=${refreshKey}`} 
-                alt="Latest Klausenpass Webcam"
+                alt={`Latest ${selectedPass.name} Webcam`}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 referrerPolicy="no-referrer"
               />
@@ -264,9 +383,59 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Time-Lapse Modal */}
+      <AnimatePresence>
+        {isTimeLapseActive && captures.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-4"
+          >
+            <div className="relative w-full max-w-4xl aspect-video rounded-2xl overflow-hidden border border-slate-800 shadow-2xl bg-black">
+              <img 
+                src={captures[captures.length - 1 - timeLapseIndex].imageUrl} 
+                alt="Time-lapse frame"
+                className="w-full h-full object-contain"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute top-4 right-4 flex gap-4">
+                <button 
+                  onClick={() => setIsTimeLapseActive(false)}
+                  className="bg-slate-900/80 hover:bg-slate-800 backdrop-blur p-2 rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-linear-to-t from-black/80 to-transparent">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Zeitraffer-Wiedergabe</h3>
+                    <p className="text-slate-400 font-mono text-sm">
+                      {captures[captures.length - 1 - timeLapseIndex].timestamp?.toDate().toLocaleString('de-CH')}
+                    </p>
+                  </div>
+                  <div className="text-slate-500 font-mono text-xs">
+                    {timeLapseIndex + 1} / {captures.length}
+                  </div>
+                </div>
+                {/* Progress Bar */}
+                <div className="mt-4 w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-blue-500"
+                    initial={false}
+                    animate={{ width: `${((timeLapseIndex + 1) / captures.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <footer className="max-w-6xl mx-auto mt-24 py-12 border-t border-slate-800 text-center">
         <p className="text-slate-600 text-sm italic">
-          Datenquelle: meteonews.ch &bull; Webcam W613 Klausenpass
+          Datenquelle: meteonews.ch &bull; Webcam {selectedPass.name}
         </p>
       </footer>
     </div>

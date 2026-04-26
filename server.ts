@@ -30,24 +30,43 @@ async function startServer() {
     console.log("Firebase config not found. Capturing will not start.");
   }
 
-  // Camera URL from test
-  const CAM_URL = "https://webcams.meteonews.net/webcams/standard/640x480/613.jpg";
+  // Camera URLs for different passes
+  const PASSES = [
+    { id: "613", name: "Klausenpass" },
+    { id: "612", name: "Gotthardpass" },
+    { id: "614", name: "Grimselpass" },
+    { id: "615", name: "Sustenpass" },
+    { id: "616", name: "Furkapass" },
+    { id: "618", name: "Oberalppass" },
+    { id: "1063", name: "Flüelapass" },
+    { id: "1062", name: "Albulapass" },
+    { id: "1061", name: "Julierpass" },
+  ];
 
   // Capture loop
   setInterval(async () => {
     if (!db) return;
     try {
-      console.log("Capturing image...");
-      // In a real scenario, we might want to verify the image exists or fetch it
-      // For now, we just record the timestamp and URL
-      // MeteoNews usually updates this static URL
-      await addDoc(collection(db, "captures"), {
-        imageUrl: `${CAM_URL}?t=${Date.now()}`,
-        timestamp: serverTimestamp(),
+      const now = new Date().toISOString();
+      console.log(`[${now}] Starting capture cycle for ${PASSES.length} passes...`);
+      const nowMs = Date.now();
+      
+      const capturePromises = PASSES.map(async (pass) => {
+        const camUrl = `https://webcams.meteonews.net/webcams/standard/640x480/${pass.id}.jpg`;
+        const imageUrl = `${camUrl}?t=${nowMs}`;
+        console.log(`- Queuing capture for ${pass.name} (${pass.id})`);
+        return addDoc(collection(db, "captures"), {
+          passId: pass.id,
+          passName: pass.name,
+          imageUrl: imageUrl,
+          timestamp: serverTimestamp(),
+        });
       });
-      console.log("Capture stored");
+
+      await Promise.all(capturePromises);
+      console.log(`[${now}] Successfully stored ${PASSES.length} captures`);
     } catch (err) {
-      console.error("Capture failed:", err);
+      console.error("Capture cycle failed:", err);
     }
   }, 60000); // 1 minute
 

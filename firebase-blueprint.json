@@ -14,9 +14,17 @@
           "type": "string",
           "format": "date-time",
           "description": "The time the image was captured."
+        },
+        "passId": {
+          "type": "string",
+          "description": "The unique identifier for the mountain pass."
+        },
+        "passName": {
+          "type": "string",
+          "description": "The display name of the mountain pass."
         }
       },
-      "required": ["imageUrl", "timestamp"]
+      "required": ["imageUrl", "timestamp", "passId", "passName"]
     }
   },
   "firestore": {
