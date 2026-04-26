@@ -42,48 +42,53 @@ interface Pass {
   altitude: string;
 }
 
+// Webcam IDs are meteonews.net cam IDs, verified live April 2026.
+// Most legacy IDs (838, 614, 619, 1058–1064, etc.) now return 404 from
+// meteonews — kept the working ones (613, 813) to preserve existing
+// Firestore archives, replaced the rest with the canonical cam currently
+// listed on meteonews.ch for each pass.
 const REGIONS: { name: string; passes: Pass[] }[] = [
   {
     name: "Zentralschweiz",
     passes: [
       { id: "613", name: "Klausenpass", altitude: "1'948 m" },
-      { id: "615", name: "Sustenpass", altitude: "2'224 m" },
-      { id: "616", name: "Furkapass", altitude: "2'429 m" },
-      { id: "838", name: "Gotthardpass", altitude: "2'106 m" },
-      { id: "618", name: "Oberalppass", altitude: "2'044 m" },
-      { id: "610", name: "Brünigpass", altitude: "1'008 m" },
+      { id: "89", name: "Sustenpass", altitude: "2'224 m" },
+      { id: "12577", name: "Furkapass", altitude: "2'429 m" },
+      { id: "9568", name: "Gotthardpass", altitude: "2'106 m" },
+      { id: "11258", name: "Oberalppass", altitude: "2'044 m" },
+      { id: "236", name: "Brünigpass", altitude: "1'008 m" },
     ],
   },
   {
     name: "Wallis",
     passes: [
-      { id: "614", name: "Grimselpass", altitude: "2'164 m" },
-      { id: "619", name: "Nufenenpass", altitude: "2'478 m" },
-      { id: "621", name: "Simplonpass", altitude: "2'008 m" },
-      { id: "625", name: "Gr. St. Bernhard", altitude: "2'469 m" },
-      { id: "607", name: "Col de la Forclaz", altitude: "1'527 m" },
+      { id: "11013", name: "Grimselpass", altitude: "2'164 m" },
+      { id: "12270", name: "Nufenenpass", altitude: "2'478 m" },
+      { id: "9585", name: "Simplonpass", altitude: "2'008 m" },
+      { id: "11995", name: "Gr. St. Bernhard", altitude: "2'469 m" },
+      { id: "9525", name: "Col de la Forclaz", altitude: "1'527 m" },
     ],
   },
   {
     name: "Berner Oberland & Waadt",
     passes: [
-      { id: "611", name: "Jaunpass", altitude: "1'509 m" },
-      { id: "608", name: "Col des Mosses", altitude: "1'445 m" },
-      { id: "609", name: "Saanenmöser", altitude: "1'279 m" },
+      { id: "733", name: "Jaunpass", altitude: "1'509 m" },
+      { id: "11502", name: "Col des Mosses", altitude: "1'445 m" },
+      { id: "571", name: "Saanenmöser", altitude: "1'279 m" },
     ],
   },
   {
     name: "Graubünden",
     passes: [
-      { id: "1064", name: "Lukmanierpass", altitude: "1'915 m" },
+      { id: "12200", name: "Lukmanierpass", altitude: "1'915 m" },
       { id: "813", name: "San Bernardino", altitude: "2'066 m" },
-      { id: "1069", name: "Splügenpass", altitude: "2'115 m" },
-      { id: "1063", name: "Flüelapass", altitude: "2'383 m" },
-      { id: "1062", name: "Albulapass", altitude: "2'312 m" },
-      { id: "1061", name: "Julierpass", altitude: "2'284 m" },
-      { id: "1060", name: "Ofenpass", altitude: "2'149 m" },
-      { id: "1059", name: "Berninapass", altitude: "2'328 m" },
-      { id: "1058", name: "Malojapass", altitude: "1'815 m" },
+      { id: "14003", name: "Splügenpass", altitude: "2'115 m" },
+      { id: "13501", name: "Flüelapass", altitude: "2'383 m" },
+      { id: "178", name: "Albulapass", altitude: "2'312 m" },
+      { id: "13196", name: "Julierpass", altitude: "2'284 m" },
+      { id: "9892", name: "Ofenpass", altitude: "2'149 m" },
+      { id: "456", name: "Berninapass", altitude: "2'328 m" },
+      { id: "13158", name: "Malojapass", altitude: "1'815 m" },
     ],
   },
 ];
