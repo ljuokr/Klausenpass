@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   collection,
   query,
@@ -26,7 +26,12 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Map as MapIcon,
+  List,
+  CalendarDays,
 } from "lucide-react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { db } from "./firebase";
 
 interface Capture {
@@ -41,13 +46,25 @@ type RoadStatus =
   | { state: "partial"; until: string }
   | { state: "open" };
 
+interface PassHistory {
+  // Source: alpen-paesse.ch yearly Wintersperre table, 10 most recent
+  // years with both an opening and closing date recorded (typically
+  // 2016–2025).
+  avg: string;       // "19.05."
+  earliest: string;  // "02.05."
+  latest: string;    // "05.06."
+  last: string;      // "02.05." (most recent year)
+}
+
 interface Pass {
   id: string;
   name: string;
   altitude: string;
+  coords: [number, number];   // [lat, lng]
   liveUrl: string;
   source: { label: string; href: string };
   status: RoadStatus;
+  history: PassHistory;
   note?: string;
   archiveId?: string;
 }
@@ -67,9 +84,11 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         id: "klausenpass",
         name: "Klausenpass",
         altitude: "1'948 m",
+        coords: [46.87, 8.86],
         liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/613.jpg",
         source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W613/Klausenpass" },
-        status: { state: "closed", opening: "Mai" },
+        status: { state: "closed", opening: "Mitte Mai" },
+        history: { avg: "19.05.", earliest: "02.05.", latest: "05.06.", last: "02.05." },
         note: "Baustelle Urnerboden bis 12. Juni",
         archiveId: "613",
       },
@@ -77,41 +96,51 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         id: "sustenpass",
         name: "Sustenpass",
         altitude: "2'224 m",
+        coords: [46.73, 8.45],
         liveUrl: "https://livecam.sustenpass.ch/Sustenpass000M.jpg",
         source: { label: "sustenpass.ch", href: "https://sustenpass.ch/de/Info/Livecam" },
         status: { state: "partial", until: "Steingletscher" },
+        history: { avg: "15.06.", earliest: "03.06.", latest: "28.06.", last: "06.06." },
       },
       {
         id: "furkapass",
         name: "Furkapass",
         altitude: "2'429 m",
+        coords: [46.57, 8.41],
         liveUrl: "https://webcam.dieselcrew.ch/tiefenbach.jpg",
         source: { label: "Hotel Tiefenbach", href: "https://www.hotel-tiefenbach.ch/" },
-        status: { state: "closed", opening: "Juni" },
+        status: { state: "closed", opening: "Anfang Juni" },
+        history: { avg: "05.06.", earliest: "24.05.", latest: "21.06.", last: "28.05." },
       },
       {
         id: "grimselpass",
         name: "Grimselpass",
         altitude: "2'164 m",
+        coords: [46.56, 8.34],
         liveUrl: "https://images.bergfex.at/webcams/?id=22208",
         source: { label: "bergfex.ch", href: "https://www.bergfex.ch/obergoms/webcams/c22208/" },
         status: { state: "partial", until: "Räterichsboden" },
+        history: { avg: "05.06.", earliest: "25.05.", latest: "14.06.", last: "28.05." },
       },
       {
         id: "gotthardpass",
         name: "Gotthardpass (Tremola)",
         altitude: "2'106 m",
+        coords: [46.56, 8.56],
         liveUrl: "https://webcam.afbn.ch/H_OSG_018,070_N_KAM_001_Sued.jpg",
         source: { label: "afbn.ch · Galleria dei Banchi", href: "https://www.afbn.ch/verkehr-und-baustellen/webcams" },
         status: { state: "closed", opening: "Mitte Mai" },
+        history: { avg: "22.05.", earliest: "16.05.", latest: "30.05.", last: "16.05." },
       },
       {
         id: "oberalppass",
         name: "Oberalppass",
         altitude: "2'044 m",
+        coords: [46.66, 8.67],
         liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1697114855/original.jpg",
         source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/oberalppass_schweiz" },
         status: { state: "closed", opening: "13. Mai 2026" },
+        history: { avg: "25.04.", earliest: "13.04.", latest: "02.05.", last: "25.04." },
       },
     ],
   },
@@ -122,17 +151,21 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         id: "nufenenpass",
         name: "Nufenenpass",
         altitude: "2'478 m",
+        coords: [46.48, 8.39],
         liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1697040056/original.jpg",
         source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/nufenenpass_schweiz_2658070" },
         status: { state: "partial", until: "All'Acqua" },
+        history: { avg: "08.06.", earliest: "25.05.", latest: "21.06.", last: "28.05." },
       },
       {
         id: "gr-st-bernhard",
         name: "Gr. St. Bernhard",
         altitude: "2'472 m",
+        coords: [45.87, 7.17],
         liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1220308451/original.jpg",
         source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/grosser-st-bernhard_schweiz_2660518" },
-        status: { state: "closed" },
+        status: { state: "closed", opening: "Anfang Juni" },
+        history: { avg: "03.06.", earliest: "29.05.", latest: "13.06.", last: "06.06." },
       },
     ],
   },
@@ -143,42 +176,52 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         id: "san-bernardino",
         name: "San Bernardino",
         altitude: "2'066 m",
+        coords: [46.49, 9.17],
         liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/813.jpg",
         source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W813/San-Bernardino-Pass" },
-        status: { state: "closed" },
+        status: { state: "closed", opening: "Mitte Mai" },
+        history: { avg: "15.05.", earliest: "28.04.", latest: "28.05.", last: "28.05." },
         archiveId: "813",
       },
       {
         id: "spluegenpass",
         name: "Splügenpass",
         altitude: "2'113 m",
+        coords: [46.51, 9.33],
         liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1292865761/original.jpg",
         source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/spluegenpass_schweiz_2658527" },
-        status: { state: "closed" },
+        status: { state: "closed", opening: "Anfang Mai" },
+        history: { avg: "02.05.", earliest: "21.04.", latest: "15.06.", last: "25.04." },
       },
       {
         id: "albulapass",
         name: "Albulapass",
         altitude: "2'312 m",
+        coords: [46.58, 9.83],
         liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1017402670/original.jpg",
         source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/albulapass_schweiz_2661821" },
-        status: { state: "closed" },
+        status: { state: "closed", opening: "Mitte Mai" },
+        history: { avg: "20.05.", earliest: "28.04.", latest: "13.06.", last: "09.05." },
       },
       {
         id: "fluelapass",
         name: "Flüelapass",
         altitude: "2'383 m",
+        coords: [46.75, 9.94],
         liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1232545098/original.jpg",
         source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/fluelapass_schweiz_2660753" },
-        status: { state: "closed" },
+        status: { state: "closed", opening: "Ende April" },
+        history: { avg: "30.04.", earliest: "06.04.", latest: "04.06.", last: "16.04." },
       },
       {
         id: "umbrailpass",
         name: "Umbrailpass",
         altitude: "2'501 m",
+        coords: [46.54, 10.43],
         liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1203067577/original.jpg",
         source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/umbrailpass_schweiz_3167576" },
-        status: { state: "closed" },
+        status: { state: "closed", opening: "Ende Mai" },
+        history: { avg: "29.05.", earliest: "20.05.", latest: "15.06.", last: "23.05." },
       },
     ],
   },
@@ -217,6 +260,95 @@ function readPassFromHash(): string {
   return ALL_PASSES.some((p) => p.id === id) ? id! : ALL_PASSES[0].id;
 }
 
+function markerColor(s: RoadStatus): string {
+  if (s.state === "open") return "#10b981";    // emerald-500
+  if (s.state === "partial") return "#fbbf24"; // amber-400
+  return "#f43f5e";                            // rose-500
+}
+
+function PassMap({
+  passes,
+  selectedId,
+  onSelect,
+}: {
+  passes: Pass[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<globalThis.Map<string, L.CircleMarker>>(new globalThis.Map());
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
+
+  // Initialise the map once.
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+    const map = L.map(containerRef.current, {
+      center: [46.7, 9.0],
+      zoom: 8,
+      minZoom: 7,
+      maxZoom: 12,
+      scrollWheelZoom: false,
+      zoomControl: true,
+      attributionControl: true,
+    });
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://openstreetmap.org">OSM</a> · <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: "abcd",
+      maxZoom: 19,
+    }).addTo(map);
+    mapRef.current = map;
+
+    // Fit bounds to all passes so the whole alpine arc is visible.
+    const bounds = L.latLngBounds(passes.map((p) => p.coords));
+    map.fitBounds(bounds, { padding: [30, 30] });
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      markersRef.current.clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Render markers and keep the active one highlighted.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    for (const marker of markersRef.current.values()) marker.remove();
+    markersRef.current.clear();
+
+    for (const pass of passes) {
+      const isActive = pass.id === selectedId;
+      const color = markerColor(pass.status);
+      const marker = L.circleMarker(pass.coords, {
+        radius: isActive ? 12 : 8,
+        fillColor: color,
+        color: isActive ? "#ffffff" : "#0f172a",
+        weight: isActive ? 3 : 2,
+        fillOpacity: 0.95,
+      }).addTo(map);
+
+      marker.bindTooltip(
+        `<b>${pass.name}</b><br/><span style="opacity:.7">${pass.altitude}</span>`,
+        { direction: "top", offset: [0, -8], opacity: 0.95, className: "pass-tip" },
+      );
+      marker.on("click", () => onSelectRef.current(pass.id));
+      markersRef.current.set(pass.id, marker);
+    }
+  }, [passes, selectedId]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-[420px] rounded-2xl border border-slate-800 overflow-hidden"
+      style={{ background: "#0b1220" }}
+    />
+  );
+}
+
 export default function App() {
   const [selectedPassId, setSelectedPassId] = useState<string>(readPassFromHash);
   const [captures, setCaptures] = useState<Capture[]>([]);
@@ -231,6 +363,14 @@ export default function App() {
   const [tlPaused, setTlPaused] = useState(false);
   const [tlSpeed, setTlSpeed] = useState<TlSpeed>(1);
   const [heroErrored, setHeroErrored] = useState(false);
+  const [view, setView] = useState<"list" | "map">(() => {
+    if (typeof window === "undefined") return "list";
+    return (localStorage.getItem("passView") as "list" | "map") ?? "list";
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("passView", view);
+  }, [view]);
 
   const selectedPass = useMemo(
     () => ALL_PASSES.find((p) => p.id === selectedPassId) || ALL_PASSES[0],
@@ -559,38 +699,119 @@ export default function App() {
         </div>
       </header>
 
-      <section className="max-w-6xl mx-auto mb-8 space-y-4">
-        {REGIONS.map((region) => (
-          <div key={region.name}>
-            <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500 mb-2">
-              {region.name}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {region.passes.map((pass) => {
-                const active = selectedPassId === pass.id;
-                return (
-                  <motion.button
-                    key={pass.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedPassId(pass.id)}
-                    aria-pressed={active}
-                    className={`px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all border ${
-                      active
-                        ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20"
-                        : "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800"
-                    }`}
-                  >
-                    {pass.name}
-                  </motion.button>
-                );
-              })}
-            </div>
+      <section className="max-w-6xl mx-auto mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500">
+            Pass auswählen
           </div>
-        ))}
+          <div className="inline-flex bg-slate-900 border border-slate-800 rounded-full p-1 text-xs font-medium">
+            <button
+              onClick={() => setView("list")}
+              aria-pressed={view === "list"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
+                view === "list" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              Liste
+            </button>
+            <button
+              onClick={() => setView("map")}
+              aria-pressed={view === "map"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${
+                view === "map" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <MapIcon className="w-3.5 h-3.5" />
+              Karte
+            </button>
+          </div>
+        </div>
+
+        {view === "map" ? (
+          <PassMap passes={ALL_PASSES} selectedId={selectedPassId} onSelect={setSelectedPassId} />
+        ) : (
+          <div className="space-y-4">
+            {REGIONS.map((region) => (
+              <div key={region.name}>
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-500 mb-2">
+                  {region.name}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {region.passes.map((pass) => {
+                    const active = selectedPassId === pass.id;
+                    const dotColor = pass.status.state === "open"
+                      ? "bg-emerald-500"
+                      : pass.status.state === "partial"
+                      ? "bg-amber-400"
+                      : "bg-rose-500";
+                    return (
+                      <motion.button
+                        key={pass.id}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedPassId(pass.id)}
+                        aria-pressed={active}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all border ${
+                          active
+                            ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20"
+                            : "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800"
+                        }`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                        {pass.name}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <main className="max-w-6xl mx-auto space-y-12">
+        {/* Opening dates strip — context for cyclists planning the season */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+              <CalendarDays className="w-3 h-3" />
+              <span>Voraussichtlich 2026</span>
+            </div>
+            <div className="text-xl font-semibold text-white">
+              {selectedPass.status.state === "open"
+                ? "Offen"
+                : selectedPass.status.state === "partial"
+                ? `bis ${selectedPass.status.until}`
+                : selectedPass.status.opening ?? "—"}
+            </div>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+              Ø Öffnung (10 J.)
+            </div>
+            <div className="text-xl font-semibold text-white">
+              {selectedPass.history.avg}
+            </div>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+              Spannweite
+            </div>
+            <div className="text-xl font-semibold text-white">
+              {selectedPass.history.earliest}<span className="text-slate-600 mx-1">–</span>{selectedPass.history.latest}
+            </div>
+          </div>
+          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+            <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">
+              Geöffnet 2025
+            </div>
+            <div className="text-xl font-semibold text-white">
+              {selectedPass.history.last}
+            </div>
+          </div>
+        </section>
+
         {/* Latest Hero */}
         <section className="relative group">
           <motion.div
