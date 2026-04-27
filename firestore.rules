@@ -6,18 +6,23 @@ service cloud.firestore {
     }
 
     function isValidCapture(data) {
-      return data.imageUrl is string && 
+      return data.imageUrl is string &&
              data.imageUrl.size() < 1000 &&
              data.timestamp is timestamp &&
              data.passId is string &&
              data.passId.size() < 100 &&
              data.passName is string &&
-             data.passName.size() < 100;
+             data.passName.size() < 100 &&
+             // storagePath is optional (legacy captures don't have it)
+             (!('storagePath' in data) ||
+               (data.storagePath is string && data.storagePath.size() < 200));
     }
 
     match /captures/{captureId} {
       allow read: if true;
       allow create: if isValidCapture(request.resource.data);
+      // Cleanup: scraper signs in anonymously and prunes old captures.
+      allow delete: if request.auth != null;
     }
   }
 }

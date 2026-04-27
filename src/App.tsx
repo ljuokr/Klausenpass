@@ -545,10 +545,13 @@ export default function App() {
     }
 
     setLoading(true);
+    // 13 passes × up to 24 captures each ≈ 312 docs, plus any in flight.
+    // 400 leaves headroom while staying small enough for the snapshot
+    // listener to be cheap.
     const q = query(
       collection(db, "captures"),
       orderBy("timestamp", "desc"),
-      limit(200),
+      limit(400),
     );
 
     const unsubscribe = onSnapshot(
