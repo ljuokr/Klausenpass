@@ -124,10 +124,11 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Sustenpass",
         altitude: "2'224 m",
         coords: [46.73, 8.45],
-        liveUrl: "https://livecam.sustenpass.ch/SteinPTZ000M.jpg",
-        source: { label: "sustenpass.ch · Steingletscher PTZ", href: "https://sustenpass.ch/de/Info/Livecam" },
+        liveUrl: "https://livecam.sustenpass.ch/Sustenpass000M.jpg",
+        source: { label: "sustenpass.ch · Passhöhe", href: "https://sustenpass.ch/de/Info/Livecam" },
         status: { state: "partial", until: "Steingletscher" },
         history: { avg: "15.06.", earliest: "03.06.", latest: "28.06.", last: "06.06." },
+        archiveId: "sustenpass",
       },
       {
         id: "furkapass",
@@ -139,6 +140,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "Anfang Juni" },
         forecastDate: "2026-06-03",
         history: { avg: "05.06.", earliest: "24.05.", latest: "21.06.", last: "28.05." },
+        archiveId: "furkapass",
       },
       {
         id: "grimselpass",
@@ -149,6 +151,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         source: { label: "bergfex.ch · Hotel Grimsel", href: "https://www.bergfex.ch/obergoms/webcams/c22208/" },
         status: { state: "partial", until: "Räterichsboden" },
         history: { avg: "05.06.", earliest: "25.05.", latest: "14.06.", last: "28.05." },
+        archiveId: "grimselpass",
       },
       {
         id: "gotthardpass",
@@ -163,6 +166,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "Mitte Mai" },
         forecastDate: "2026-05-15",
         history: { avg: "22.05.", earliest: "16.05.", latest: "30.05.", last: "16.05." },
+        archiveId: "gotthardpass",
       },
       {
         id: "oberalppass",
@@ -174,6 +178,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "13. Mai 2026" },
         forecastDate: "2026-05-13",
         history: { avg: "25.04.", earliest: "13.04.", latest: "02.05.", last: "25.04." },
+        archiveId: "oberalppass",
       },
     ],
   },
@@ -189,6 +194,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         source: { label: "meteonews.ch · Ulrichen Goms", href: "https://meteonews.ch/de/Webcam/W12270/Ulrichen" },
         status: { state: "partial", until: "All'Acqua" },
         history: { avg: "08.06.", earliest: "25.05.", latest: "21.06.", last: "28.05." },
+        archiveId: "nufenenpass",
       },
       {
         id: "gr-st-bernhard",
@@ -200,6 +206,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "Anfang Juni" },
         forecastDate: "2026-06-03",
         history: { avg: "03.06.", earliest: "29.05.", latest: "13.06.", last: "06.06." },
+        archiveId: "gr-st-bernhard",
       },
     ],
   },
@@ -230,6 +237,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "Anfang Mai" },
         forecastDate: "2026-05-03",
         history: { avg: "02.05.", earliest: "21.04.", latest: "15.06.", last: "25.04." },
+        archiveId: "spluegenpass",
       },
       {
         id: "albulapass",
@@ -241,6 +249,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "Mitte Mai" },
         forecastDate: "2026-05-15",
         history: { avg: "20.05.", earliest: "28.04.", latest: "13.06.", last: "09.05." },
+        archiveId: "albulapass",
       },
       {
         id: "fluelapass",
@@ -252,6 +261,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "Ende April" },
         forecastDate: "2026-04-28",
         history: { avg: "30.04.", earliest: "06.04.", latest: "04.06.", last: "16.04." },
+        archiveId: "fluelapass",
       },
       {
         id: "umbrailpass",
@@ -263,6 +273,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         status: { state: "closed", opening: "Ende Mai" },
         forecastDate: "2026-05-28",
         history: { avg: "29.05.", earliest: "20.05.", latest: "15.06.", last: "23.05." },
+        archiveId: "umbrailpass",
       },
     ],
   },
