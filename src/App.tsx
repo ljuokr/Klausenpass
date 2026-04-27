@@ -124,8 +124,8 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Sustenpass",
         altitude: "2'224 m",
         coords: [46.73, 8.45],
-        liveUrl: "https://livecam.sustenpass.ch/Sustenpass000M.jpg",
-        source: { label: "sustenpass.ch", href: "https://sustenpass.ch/de/Info/Livecam" },
+        liveUrl: "https://livecam.sustenpass.ch/SteinPTZ000M.jpg",
+        source: { label: "sustenpass.ch · Steingletscher PTZ", href: "https://sustenpass.ch/de/Info/Livecam" },
         status: { state: "partial", until: "Steingletscher" },
         history: { avg: "15.06.", earliest: "03.06.", latest: "28.06.", last: "06.06." },
       },
@@ -155,8 +155,11 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Gotthardpass (Tremola)",
         altitude: "2'106 m",
         coords: [46.56, 8.56],
-        liveUrl: "https://webcam.afbn.ch/H_OSG_018,070_N_KAM_001_Sued.jpg",
-        source: { label: "afbn.ch · Galleria dei Banchi", href: "https://www.afbn.ch/verkehr-und-baustellen/webcams" },
+        // The Tremola-side cams (Galleria dei Banchi, Hospiz) are
+        // currently "ausser Betrieb"; Schöllenen (Andermatt approach)
+        // is the live AFBN cam on the cycling route.
+        liveUrl: "https://webcam.afbn.ch/H_SCH_002,542_N_KAM_001_Nord.jpg",
+        source: { label: "afbn.ch · Schöllenen", href: "https://www.afbn.ch/verkehr-und-baustellen/webcams" },
         status: { state: "closed", opening: "Mitte Mai" },
         forecastDate: "2026-05-15",
         history: { avg: "22.05.", earliest: "16.05.", latest: "30.05.", last: "16.05." },
@@ -182,8 +185,8 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Nufenenpass",
         altitude: "2'478 m",
         coords: [46.48, 8.39],
-        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1697040056/original.jpg",
-        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/nufenenpass_schweiz_2658070" },
+        liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/12270.jpg",
+        source: { label: "meteonews.ch · Ulrichen Goms", href: "https://meteonews.ch/de/Webcam/W12270/Ulrichen" },
         status: { state: "partial", until: "All'Acqua" },
         history: { avg: "08.06.", earliest: "25.05.", latest: "21.06.", last: "28.05." },
       },
@@ -208,8 +211,10 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "San Bernardino",
         altitude: "2'066 m",
         coords: [46.49, 9.17],
-        liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/813.jpg",
-        source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W813/San-Bernardino-Pass" },
+        // meteonews W813 currently mislabelled (returns Beckenried);
+        // bergfex 5676 is the canonical San Bernardino village/pass cam.
+        liveUrl: "https://images.bergfex.at/webcams/?id=5676&format=4",
+        source: { label: "bergfex · San Bernardino", href: "https://www.bergfex.com/sanbernardino/webcams/c5676/" },
         status: { state: "closed", opening: "Mitte Mai" },
         forecastDate: "2026-05-15",
         history: { avg: "15.05.", earliest: "28.04.", latest: "28.05.", last: "28.05." },
