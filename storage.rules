@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Pass webcam captures: anyone can view (public archive),
+    // only authenticated clients (the anonymous-signed-in scraper)
+    // can write or delete.
+    match /captures/{passId}/{filename} {
+      allow read: if true;
+      allow write, delete: if request.auth != null;
+    }
+
+    // Default deny everywhere else.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
