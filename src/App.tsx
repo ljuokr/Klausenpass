@@ -64,9 +64,35 @@ interface Pass {
   liveUrl: string;
   source: { label: string; href: string };
   status: RoadStatus;
+  // ISO date for the 2026 forecast opening — drives the map's
+  // "öffnet < 2 Wochen" categorisation. Closed passes only.
+  forecastDate?: string;
   history: PassHistory;
   note?: string;
   archiveId?: string;
+}
+
+type CyclingStatus = "open" | "soon" | "later";
+
+function cyclingStatus(pass: Pass, today: Date): CyclingStatus {
+  if (pass.status.state === "open" || pass.status.state === "partial") return "open";
+  if (!pass.forecastDate) return "later";
+  const days = Math.round(
+    (new Date(pass.forecastDate).getTime() - today.getTime()) / 86_400_000,
+  );
+  return days <= 14 ? "soon" : "later";
+}
+
+function cyclingMarker(s: CyclingStatus): string {
+  if (s === "open") return "#10b981";   // emerald-500
+  if (s === "soon") return "#fbbf24";   // amber-400
+  return "#ef4444";                     // red-500
+}
+
+function cyclingDot(s: CyclingStatus): string {
+  if (s === "open") return "bg-emerald-500";
+  if (s === "soon") return "bg-amber-400";
+  return "bg-red-500";
 }
 
 // Curated list of winter-closed passes — focused on cycling: cams that
@@ -88,6 +114,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/613.jpg",
         source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W613/Klausenpass" },
         status: { state: "closed", opening: "Mitte Mai" },
+        forecastDate: "2026-05-15",
         history: { avg: "19.05.", earliest: "02.05.", latest: "05.06.", last: "02.05." },
         note: "Baustelle Urnerboden bis 12. Juni",
         archiveId: "613",
@@ -110,6 +137,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         liveUrl: "https://webcam.dieselcrew.ch/tiefenbach.jpg",
         source: { label: "Hotel Tiefenbach", href: "https://www.hotel-tiefenbach.ch/" },
         status: { state: "closed", opening: "Anfang Juni" },
+        forecastDate: "2026-06-03",
         history: { avg: "05.06.", earliest: "24.05.", latest: "21.06.", last: "28.05." },
       },
       {
@@ -117,8 +145,8 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Grimselpass",
         altitude: "2'164 m",
         coords: [46.56, 8.34],
-        liveUrl: "https://images.bergfex.at/webcams/?id=22208",
-        source: { label: "bergfex.ch", href: "https://www.bergfex.ch/obergoms/webcams/c22208/" },
+        liveUrl: "https://images.bergfex.at/webcams/?id=22208&format=4",
+        source: { label: "bergfex.ch · Hotel Grimsel", href: "https://www.bergfex.ch/obergoms/webcams/c22208/" },
         status: { state: "partial", until: "Räterichsboden" },
         history: { avg: "05.06.", earliest: "25.05.", latest: "14.06.", last: "28.05." },
       },
@@ -130,6 +158,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         liveUrl: "https://webcam.afbn.ch/H_OSG_018,070_N_KAM_001_Sued.jpg",
         source: { label: "afbn.ch · Galleria dei Banchi", href: "https://www.afbn.ch/verkehr-und-baustellen/webcams" },
         status: { state: "closed", opening: "Mitte Mai" },
+        forecastDate: "2026-05-15",
         history: { avg: "22.05.", earliest: "16.05.", latest: "30.05.", last: "16.05." },
       },
       {
@@ -137,9 +166,10 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Oberalppass",
         altitude: "2'044 m",
         coords: [46.66, 8.67],
-        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1697114855/original.jpg",
-        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/oberalppass_schweiz" },
+        liveUrl: "https://images.bergfex.at/webcams/?id=365&format=4",
+        source: { label: "bergfex.ch · Alpsu", href: "https://www.bergfex.ch/andermatt-oberalp-sedrun/webcams/c365/" },
         status: { state: "closed", opening: "13. Mai 2026" },
+        forecastDate: "2026-05-13",
         history: { avg: "25.04.", earliest: "13.04.", latest: "02.05.", last: "25.04." },
       },
     ],
@@ -162,9 +192,10 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Gr. St. Bernhard",
         altitude: "2'472 m",
         coords: [45.87, 7.17],
-        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1220308451/original.jpg",
-        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/grosser-st-bernhard_schweiz_2660518" },
+        liveUrl: "https://images.bergfex.at/webcams/?id=25197&format=4",
+        source: { label: "bergfex.ch · Tunnel Süd", href: "https://www.bergfex.ch/sommer/saint-bernard/webcams/c25197/" },
         status: { state: "closed", opening: "Anfang Juni" },
+        forecastDate: "2026-06-03",
         history: { avg: "03.06.", earliest: "29.05.", latest: "13.06.", last: "06.06." },
       },
     ],
@@ -180,6 +211,7 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/813.jpg",
         source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W813/San-Bernardino-Pass" },
         status: { state: "closed", opening: "Mitte Mai" },
+        forecastDate: "2026-05-15",
         history: { avg: "15.05.", earliest: "28.04.", latest: "28.05.", last: "28.05." },
         archiveId: "813",
       },
@@ -188,9 +220,10 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Splügenpass",
         altitude: "2'113 m",
         coords: [46.51, 9.33],
-        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1292865761/original.jpg",
-        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/spluegenpass_schweiz_2658527" },
+        liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/14003.jpg",
+        source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W14003/Spl%C3%BCgenpass" },
         status: { state: "closed", opening: "Anfang Mai" },
+        forecastDate: "2026-05-03",
         history: { avg: "02.05.", earliest: "21.04.", latest: "15.06.", last: "25.04." },
       },
       {
@@ -198,9 +231,10 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Albulapass",
         altitude: "2'312 m",
         coords: [46.58, 9.83],
-        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1017402670/original.jpg",
-        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/albulapass_schweiz_2661821" },
+        liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/11546.jpg",
+        source: { label: "meteonews.ch · Bergün", href: "https://meteonews.ch/de/Webcam/W11546/Albulapass" },
         status: { state: "closed", opening: "Mitte Mai" },
+        forecastDate: "2026-05-15",
         history: { avg: "20.05.", earliest: "28.04.", latest: "13.06.", last: "09.05." },
       },
       {
@@ -208,9 +242,10 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Flüelapass",
         altitude: "2'383 m",
         coords: [46.75, 9.94],
-        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1232545098/original.jpg",
-        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/fluelapass_schweiz_2660753" },
+        liveUrl: "https://webcams.meteonews.net/webcams/standard/640x480/13501.jpg",
+        source: { label: "meteonews.ch", href: "https://meteonews.ch/de/Webcam/W13501/Fl%C3%BCelapass" },
         status: { state: "closed", opening: "Ende April" },
+        forecastDate: "2026-04-28",
         history: { avg: "30.04.", earliest: "06.04.", latest: "04.06.", last: "16.04." },
       },
       {
@@ -218,9 +253,10 @@ const REGIONS: { name: string; passes: Pass[] }[] = [
         name: "Umbrailpass",
         altitude: "2'501 m",
         coords: [46.54, 10.43],
-        liveUrl: "https://imgproxy.windy.com/_/normal/plain/current/1203067577/original.jpg",
-        source: { label: "meteoblue.com", href: "https://www.meteoblue.com/de/wetter/webcams/umbrailpass_schweiz_3167576" },
+        liveUrl: "https://images.bergfex.at/webcams/?id=4771&format=4",
+        source: { label: "bergfex · Stilfserjoch", href: "https://www.bergfex.com/stilfser-joch-ortler/webcams/c4771/" },
         status: { state: "closed", opening: "Ende Mai" },
+        forecastDate: "2026-05-28",
         history: { avg: "29.05.", earliest: "20.05.", latest: "15.06.", last: "23.05." },
       },
     ],
@@ -260,19 +296,15 @@ function readPassFromHash(): string {
   return ALL_PASSES.some((p) => p.id === id) ? id! : ALL_PASSES[0].id;
 }
 
-function markerColor(s: RoadStatus): string {
-  if (s.state === "open") return "#10b981";    // emerald-500
-  if (s.state === "partial") return "#fbbf24"; // amber-400
-  return "#f43f5e";                            // rose-500
-}
-
 function PassMap({
   passes,
   selectedId,
+  today,
   onSelect,
 }: {
   passes: Pass[];
   selectedId: string;
+  today: Date;
   onSelect: (id: string) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -322,7 +354,8 @@ function PassMap({
 
     for (const pass of passes) {
       const isActive = pass.id === selectedId;
-      const color = markerColor(pass.status);
+      const cs = cyclingStatus(pass, today);
+      const color = cyclingMarker(cs);
       const marker = L.circleMarker(pass.coords, {
         radius: isActive ? 12 : 8,
         fillColor: color,
@@ -331,14 +364,20 @@ function PassMap({
         fillOpacity: 0.95,
       }).addTo(map);
 
+      const sub =
+        cs === "open"
+          ? "Webcam zeigt offen"
+          : cs === "soon"
+          ? "Öffnet < 2 Wochen"
+          : "Öffnet später";
       marker.bindTooltip(
-        `<b>${pass.name}</b><br/><span style="opacity:.7">${pass.altitude}</span>`,
+        `<b>${pass.name}</b><br/><span style="opacity:.7">${pass.altitude} · ${sub}</span>`,
         { direction: "top", offset: [0, -8], opacity: 0.95, className: "pass-tip" },
       );
       marker.on("click", () => onSelectRef.current(pass.id));
       markersRef.current.set(pass.id, marker);
     }
-  }, [passes, selectedId]);
+  }, [passes, selectedId, today]);
 
   return (
     <div
@@ -371,6 +410,13 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("passView", view);
   }, [view]);
+
+  // Frozen at component mount — fine for a session; refresh recomputes.
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
   const selectedPass = useMemo(
     () => ALL_PASSES.find((p) => p.id === selectedPassId) || ALL_PASSES[0],
@@ -729,7 +775,28 @@ export default function App() {
         </div>
 
         {view === "map" ? (
-          <PassMap passes={ALL_PASSES} selectedId={selectedPassId} onSelect={setSelectedPassId} />
+          <div className="space-y-3">
+            <PassMap
+              passes={ALL_PASSES}
+              selectedId={selectedPassId}
+              today={today}
+              onSelect={setSelectedPassId}
+            />
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-400 px-2">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                Webcam zeigt offene Passstrasse
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                Öffnet innerhalb 2 Wochen
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                Öffnet später
+              </span>
+            </div>
+          </div>
         ) : (
           <div className="space-y-4">
             {REGIONS.map((region) => (
@@ -740,11 +807,7 @@ export default function App() {
                 <div className="flex flex-wrap gap-2">
                   {region.passes.map((pass) => {
                     const active = selectedPassId === pass.id;
-                    const dotColor = pass.status.state === "open"
-                      ? "bg-emerald-500"
-                      : pass.status.state === "partial"
-                      ? "bg-amber-400"
-                      : "bg-rose-500";
+                    const dot = cyclingDot(cyclingStatus(pass, today));
                     return (
                       <motion.button
                         key={pass.id}
@@ -758,7 +821,7 @@ export default function App() {
                             : "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800"
                         }`}
                       >
-                        <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
                         {pass.name}
                       </motion.button>
                     );
